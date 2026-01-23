@@ -1,5 +1,8 @@
 # Harmony HAP Parser
 
+This repo documents the HAP signing block format and provides a small parser
+to inspect real `.hap` files.
+
 Small, self-contained tools and notes for inspecting HarmonyOS HAP signing
 blocks. This repo focuses on the signing block layout, the sub-block types,
 and a simple parser that prints a readable structure summary.
@@ -9,6 +12,9 @@ and a simple parser that prints a readable structure summary.
 - `HapStructure.md`
   - A concise description of HAP signing block layout, sub-block types,
     and signing/verify flows (based on open-source code).
+- `HapSigning_Overview.md`
+  - A higher-level summary of the signing scheme and a brief comparison with
+    Android APK signing.
 - `sample.hap` (example file)
   - A small test HAP for quick local parsing.
 - `print_hap_signing_block.py`

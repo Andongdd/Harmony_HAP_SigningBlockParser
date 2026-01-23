@@ -1,4 +1,7 @@
-HAP signing block structure (based on the open-source code)
+# HAP Signing Block Structure
+
+This document focuses on the byte-level layout of the HAP signing block and
+the related sub-blocks.
 
 ```text
 HAP Signing Block (inserted before Central Directory)
@@ -133,6 +136,10 @@ CodeSignBlock (codeSignArray)
 └───────────────────────────────────────────────────────────┘
 ```
 
+Offset notes:
+- Sub-block head `offset` is relative to the start of the HAP signing block.
+- The embedded codesign header `offset` is an absolute file offset in the HAP.
+
 HAP signing flow (detailed, based on the current code)
 1) Read params and certificates
    - CheckParams collects input/output/alg/profile/property/proof/signCode/etc.
@@ -205,3 +212,9 @@ Key data structures used in verify
   pairLen + algId + digestLen + digestBytes.
 - Optional blocks: raw bytes for profile/property/proof (property may embed codesign header+payload)
 - Optional block order is the vector order and affects the final digest.
+
+Glossary:
+- signing block: the data region inserted before the Central Directory.
+- sub-block: a typed (type/length/offset) entry inside the signing block.
+- optional block: profile/property/proof sub-blocks provided by external files.
+- codesign: optional extra integrity layer for native/executable content.
