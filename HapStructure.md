@@ -167,6 +167,47 @@ Offset notes:
    - Encode the digest list into a byte array (version, count, pairs).
    - Generate PKCS7 SignedData over that encoded digest list.
 
+**HAP digest computation (byte-level, as implemented)**
+
+Inputs:
+- Three data sources in this order:
+  1) ZIP entry contents (from file start to signing block)
+  2) Central Directory
+  3) EOCD (End of Central Directory)
+- Optional blocks (profile/property/proof, plus codesign property block if enabled)
+- Digest algorithm determined by `signAlg` (SHA-256 / SHA-384 / SHA-512)
+
+Step A: Per-chunk digest list (1MB chunks)
+```
+chunkDigest = 0x5A || chunkCount (int32) ||
+              H( 0xA5 || chunkLen(int32) || chunkData[0] ) ||
+              H( 0xA5 || chunkLen(int32) || chunkData[1] ) ||
+              ...
+```
+- `0x5A` is ZIP_FIRST_LEVEL_CHUNK_PREFIX
+- `0xA5` is ZIP_SECOND_LEVEL_CHUNK_PREFIX
+- `chunkLen` is the actual size of the chunk (<= 1MB)
+- `H(...)` is the selected hash (SHA-256/384/512)
+- `chunkCount` counts chunks across ALL three data sources, in order
+- Integers are written in native endianness (memcpy of int32)
+
+Step B: Final digest (includes optional blocks)
+```
+finalDigest = H( chunkDigest || optionalBlock[0] || optionalBlock[1] || ... )
+```
+- Optional blocks are appended in vector order (affects the digest)
+
+Step C: Encode for PKCS7 signed content
+```
+int32 version      // fixed 2
+int32 blockCount   // fixed 1 (current implementation)
+repeat for each pair:
+  int32 pairLen    // = 4 + 4 + digestLen
+  int32 algId      // signature algorithm id (e.g., SHA256withECDSA -> 0x201)
+  int32 digestLen
+  bytes digest     // finalDigest from Step B
+```
+
 5) Build HAP signing block
    - Concatenate sub-block heads (type/length/offset) and sub-block values
      (optional blocks + main signature block).
