@@ -37,7 +37,7 @@ Offset 0
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Sub-block types and value formats:
+**Sub-block types and value formats:**
 
 - `0x20000000` (HAP_SIGNATURE_SCHEME_V1_BLOCK_ID)
   - Meaning: main HAP signature block (PKCS7 over encoded digest list)
@@ -140,7 +140,10 @@ Offset notes:
 - Sub-block head `offset` is relative to the start of the HAP signing block.
 - The embedded codesign header `offset` is an absolute file offset in the HAP.
 
-HAP signing flow (detailed, based on the current code)
+
+
+**HAP signing flow (detailed, based on the current code)**
+
 1) Read params and certificates
    - CheckParams collects input/output/alg/profile/property/proof/signCode/etc.
    - LoadOptionalBlocks reads profile/property/proof files into optionalBlocks.
@@ -174,7 +177,8 @@ HAP signing flow (detailed, based on the current code)
    - Update EOCD with new Central Directory offset.
    - Write [signing block + central directory + EOCD] to output.
 
-HAP verify flow (matches the signing flow)
+**HAP verify flow (matches the signing flow)**
+
 1) Locate and parse the signing block
    - Find EOCD and Central Directory offset.
    - Read the HAP signing block header/tail and parse sub-block heads.
@@ -218,3 +222,62 @@ Glossary:
 - sub-block: a typed (type/length/offset) entry inside the signing block.
 - optional block: profile/property/proof sub-blocks provided by external files.
 - codesign: optional extra integrity layer for native/executable content.
+
+#### **A simplified PKCS#7 Example Structure**
+
+```
+ContentInfo
+ └── SignedData
+     ├── digestAlgorithms
+     ├── encapContentInfo
+     │    └── Data
+     ├── certificates
+     └── signerInfos
+          └── SignerInfo
+               ├── signedAttrs
+               └── signature
+```
+
+#### **A much more complete CMS / PKCS#7 SignedData structure**
+
+This is a **structure-accurate tree view**, closely matching **RFC 5652**, though still presented in a readable form (not raw ASN.1):
+
+```ContentInfo
+ContentInfo
+├── contentType = signedData (1.2.840.113549.1.7.2)
+└── content [0] EXPLICIT
+    └── SignedData
+        ├── version
+        ├── digestAlgorithms (SET OF)
+        │    └── DigestAlgorithmIdentifier
+        │         ├── algorithm (OID, e.g. sha256)
+        │         └── parameters (OPTIONAL)
+        ├── encapContentInfo
+        │    └── EncapsulatedContentInfo
+        │         ├── eContentType (OID, usually data)
+        │         └── eContent [0] EXPLICIT OPTIONAL
+        │              └── OCTET STRING (payload, may be absent)
+        ├── certificates [0] IMPLICIT OPTIONAL
+        │    └── CertificateSet (SET OF)
+        │         ├── X.509 end-entity certificate
+        │         └── intermediate CA certificates
+        ├── crls [1] IMPLICIT OPTIONAL
+        │    └── RevocationInfoChoices
+        └── signerInfos (SET OF)
+             └── SignerInfo
+                  ├── version
+                  ├── sid (SignerIdentifier)
+                  │    ├── issuerAndSerialNumber
+                  │    └── subjectKeyIdentifier
+                  ├── digestAlgorithm
+                  ├── signedAttrs [0] IMPLICIT OPTIONAL
+                  │    └── SignedAttributes (SET OF)
+                  │         ├── contentType
+                  │         ├── messageDigest
+                  │         ├── signingTime (optional)
+                  │         └── other attributes
+                  ├── signatureAlgorithm
+                  ├── signature (OCTET STRING)
+                  └── unsignedAttrs [1] IMPLICIT OPTIONAL
+                       └── UnsignedAttributes (SET OF)
+                            └── timeStampToken, etc.
